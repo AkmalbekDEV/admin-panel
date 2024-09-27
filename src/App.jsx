@@ -27,7 +27,7 @@ import {
 } from './uploadData';
 import { fetchCourses, fetchTeachers } from './fetchData';
 import { deleteCourse } from './DeleteCourse';
-import { deleteTeacher } from './deleteTeacher';
+import { deleteTeacher } from './DeleteTeacher';
 
 const MotionBox = motion(Box); // Motion wrapper for animated Box
 
