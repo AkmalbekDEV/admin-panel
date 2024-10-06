@@ -1,4 +1,4 @@
-import { db, storage, collection, addDoc, ref, uploadBytes, getDownloadURL } from './firebase';
+import { db, storage, collection, addDoc, ref, uploadBytes, getDownloadURL, doc, updateDoc } from './firebase';
 
 const uploadImage = async (file) => {
   if (!file) return null;
@@ -19,10 +19,20 @@ const uploadImage = async (file) => {
 
 const addCourse = async (courseData) => {
   try {
-    const docRef = await addDoc(collection(db, "courses"), courseData);
-    console.log("Document written with ID: ", docRef.id);
+    const docRef = await addDoc(collection(db, 'courses'), courseData);
+    console.log('Document written with ID: ', docRef.id);
   } catch (e) {
-    console.error("Error adding document: ", e);
+    console.error('Error adding document: ', e);
+  }
+};
+
+const updateCourse = async (id, updatedData) => {
+  try {
+    const courseRef = doc(db, 'courses', id);
+    await updateDoc(courseRef, updatedData);
+    console.log('Course updated with ID: ', id);
+  } catch (e) {
+    console.error('Error updating course: ', e);
   }
 };
 
@@ -31,6 +41,16 @@ const addTeacher = async (teacherData) => {
     await addDoc(collection(db, 'teachers'), teacherData);
   } catch (error) {
     console.error('Error adding teacher:', error);
+  }
+};
+
+const updateTeacher = async (id, updatedData) => {
+  try {
+    const teacherRef = doc(db, 'teachers', id);
+    await updateDoc(teacherRef, updatedData);
+    console.log('Teacher updated with ID: ', id);
+  } catch (error) {
+    console.error('Error updating teacher:', error);
   }
 };
 
@@ -47,4 +67,4 @@ const uploadTeacherImage = async (file) => {
   }
 };
 
-export { addCourse, uploadImage, addTeacher, uploadTeacherImage };
+export { addCourse, uploadImage, addTeacher, uploadTeacherImage, updateCourse, updateTeacher };

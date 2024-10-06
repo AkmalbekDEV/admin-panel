@@ -15,8 +15,14 @@ import {
   Box,
   Image,
   Stack,
-  useBreakpointValue,
   useDisclosure,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalFooter,
+  ModalBody,
+  ModalCloseButton,
 } from '@chakra-ui/react';
 import { motion } from 'framer-motion';  // Import Framer Motion for animations
 import {
@@ -24,6 +30,8 @@ import {
   uploadImage,
   addTeacher,
   uploadTeacherImage,
+  updateCourse,
+  updateTeacher,
 } from './uploadData';
 import { fetchCourses, fetchTeachers } from './fetchData';
 import { deleteCourse } from './DeleteCourse';
@@ -39,6 +47,7 @@ const App = () => {
   const [detailedDescription, setDetailedDescription] = useState('');
   const [price, setPrice] = useState('');
   const [image, setImage] = useState(null);
+  const [editCourseId, setEditCourseId] = useState(null); // For editing
 
   // For Teachers
   const [teachers, setTeachers] = useState([]);
@@ -46,11 +55,16 @@ const App = () => {
   const [teacherJob, setTeacherJob] = useState('');
   const [teacherDesc, setTeacherDesc] = useState('');
   const [teacherImage, setTeacherImage] = useState(null);
+  const [editTeacherId, setEditTeacherId] = useState(null); // For editing
 
   // For other settings
   const toast = useToast();
   const fileInputCourseRef = useRef(null);
   const fileInputTeacherRef = useRef(null);
+
+  // Modal controls for courses and teachers
+  const { isOpen: isCourseModalOpen, onOpen: onOpenCourseModal, onClose: onCloseCourseModal } = useDisclosure();
+  const { isOpen: isTeacherModalOpen, onOpen: onOpenTeacherModal, onClose: onCloseTeacherModal } = useDisclosure();
 
   // For Courses
   const handleImageChange = (e) => {
@@ -67,8 +81,8 @@ const App = () => {
         isClosable: true,
         status: 'error',
         title: "Barcha ma'lumotlarni kiriting!",
-        position: 'top'
-      })
+        position: 'top',
+      });
       return;
     }
 
@@ -82,26 +96,26 @@ const App = () => {
           price: price,
           imageURL: imageURL,
         };
-        await addCourse(newCourse);
+        if (editCourseId) {
+          // Update the course if editCourseId is set
+          await updateCourse(editCourseId, newCourse);
+          setCourses((prevCourses) =>
+            prevCourses.map((course) =>
+              course.id === editCourseId ? { ...course, ...newCourse } : course
+            )
+          );
+          setEditCourseId(null);
+        } else {
+          // Add new course if editCourseId is not set
+          await addCourse(newCourse);
+          setCourses((prevCourses) => [...prevCourses, newCourse]);
+        }
       }
-    } else {
-      newCourse = {
-        name: courseName,
-        brief: briefDescription,
-        detailed: detailedDescription,
-        price: price,
-        imageURL: '',
-      };
-      await addCourse(newCourse);
-    }
-
-    if (newCourse) {
-      setCourses((prevCourses) => [...prevCourses, newCourse]);
     }
 
     toast({
-      title: 'Kurs kiritildi!',
-      description: "Siz kurs qo'shishni muvaffaqiyatli tarzda amalga oshirdingiz!",
+      title: editCourseId ? 'Kurs yangilandi!' : 'Kurs kiritildi!',
+      description: `Siz kurs ${editCourseId ? 'yangilashni' : "qo'shishni"} muvaffaqiyatli tarzda amalga oshirdingiz!`,
       status: 'success',
       duration: 5000,
       isClosable: true,
@@ -115,6 +129,7 @@ const App = () => {
     if (fileInputCourseRef.current) {
       fileInputCourseRef.current.value = '';
     }
+    onCloseCourseModal(); // Close modal
   };
 
   useEffect(() => {
@@ -139,45 +154,43 @@ const App = () => {
     e.preventDefault();
     let newTeacher = null;
 
-    if (!teachers || !teacherName || !teacherJob || !teacherDesc || !teacherImage) {
+    if (!teacherName || !teacherJob || !teacherDesc || !teacherImage) {
       toast({
         duration: 5000,
         isClosable: true,
         status: 'error',
         title: "Barcha ma'lumotlarni kiriting!",
-        position: 'top'
-      })
+        position: 'top',
+      });
       return;
     }
 
-    if (teacherImage) {
-      const imageURL = await uploadTeacherImage(teacherImage);
-      if (imageURL) {
-        newTeacher = {
-          name: teacherName,
-          job: teacherJob,
-          desc: teacherDesc,
-          imageURL: imageURL,
-        };
-        await addTeacher(newTeacher);
-      }
-    } else {
-      newTeacher = {
-        name: teacherName,
-        job: teacherJob,
-        desc: teacherDesc,
-        imageURL: '',
-      };
-      await addTeacher(newTeacher);
-    }
+    const imageURL = await uploadTeacherImage(teacherImage);
+    newTeacher = {
+      name: teacherName,
+      job: teacherJob,
+      desc: teacherDesc,
+      imageURL: imageURL || '',
+    };
 
-    if (newTeacher) {
-      setTeachers((prevTeacher) => [...prevTeacher, newTeacher]);
+    if (editTeacherId) {
+      // Update the teacher if editTeacherId is set
+      await updateTeacher(editTeacherId, newTeacher);
+      setTeachers((prevTeachers) =>
+        prevTeachers.map((teacher) =>
+          teacher.id === editTeacherId ? { ...teacher, ...newTeacher } : teacher
+        )
+      );
+      setEditTeacherId(null);
+    } else {
+      // Add new teacher if editTeacherId is not set
+      await addTeacher(newTeacher);
+      setTeachers((prevTeachers) => [...prevTeachers, newTeacher]);
     }
 
     toast({
-      title: 'Ustoz kiritildi!',
-      description: "Siz ustoz qo'shishni muvaffaqiyatli tarzda amalga oshirdingiz!",
+      title: editTeacherId ? 'Ustoz yangilandi!' : 'Ustoz kiritildi!',
+      description: `Siz ustoz ${editTeacherId ? 'yangilashni' : "qo'shishni"} muvaffaqiyatli tarzda amalga oshirdingiz!`,
       status: 'success',
       duration: 5000,
       isClosable: true,
@@ -190,6 +203,7 @@ const App = () => {
     if (fileInputTeacherRef.current) {
       fileInputTeacherRef.current.value = '';
     }
+    onCloseTeacherModal(); // Close modal
   };
 
   useEffect(() => {
@@ -205,14 +219,25 @@ const App = () => {
     setTeachers(teachers.filter((teacher) => teacher.id !== id));
   };
 
+  const openCourseModalForEdit = (course) => {
+    setEditCourseId(course.id);
+    setCourseName(course.name);
+    setBriefDescription(course.brief);
+    setDetailedDescription(course.detailed);
+    setPrice(course.price);
+    onOpenCourseModal(); // Open modal
+  };
+
+  const openTeacherModalForEdit = (teacher) => {
+    setEditTeacherId(teacher.id);
+    setTeacherName(teacher.name);
+    setTeacherJob(teacher.job);
+    setTeacherDesc(teacher.desc);
+    onOpenTeacherModal(); // Open modal
+  };
+
   return (
-    <Box
-      p={5}
-      bg="gray.800" // Background color
-      minH="100vh"
-      color="white"
-      className='flex justify-center'
-    >
+    <Box p={5} bg="gray.800" minH="100vh" color="white" className='flex justify-center'>
       <Tabs variant='soft-rounded' colorScheme='purple' mt={5} w='100%'>
         <TabList display={'flex'} justifyContent={'center'} mb={3}>
           <Tab fontSize={{ base: '20px', md: '24px' }} _selected={{ color: 'white', bg: 'gray.600' }}>
@@ -223,273 +248,159 @@ const App = () => {
           </Tab>
         </TabList>
         <TabPanels>
+          {/* Teachers Tab */}
           <TabPanel>
             <Stack spacing={6} align='center'>
-              <FormControl
-                as={MotionBox}
-                w={{ base: '100%', md: '40%' }}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                bg='gray.700'
-                p={7}
-                borderRadius='md'
-                shadow='lg'
-              >
-                <Text fontSize={{ base: '20px', md: '24px' }} fontWeight='bold'>
-                  Ustoz haqida
-                </Text>
-                <FormLabel mt={4} fontSize={{ base: '14px', md: '16px' }}>
-                  Ustozning to'liq ismi
-                </FormLabel>
-                <Input
-                  type='text'
-                  value={teacherName}
-                  onChange={(e) => setTeacherName(e.target.value)}
-                  placeholder='Ustozning ismi...'
-                  variant='outline'
-                  borderColor='gray.500'
-                  focusBorderColor='purple.500'
-                  transition='all 0.3s'
-                  _hover={{ borderColor: 'gray.400' }}
-                />
-                <FormLabel mt={2} fontSize={{ base: '14px', md: '16px' }}>
-                  Ustozning ishi
-                </FormLabel>
-                <Input
-                  type='text'
-                  value={teacherJob}
-                  onChange={(e) => setTeacherJob(e.target.value)}
-                  placeholder='Ustozning ishi...'
-                  variant='outline'
-                  borderColor='gray.500'
-                  focusBorderColor='purple.500'
-                  transition='all 0.3s'
-                  _hover={{ borderColor: 'gray.400' }}
-                />
-                <FormLabel mt={2} fontSize={{ base: '14px', md: '16px' }}>
-                  To'liq ma'lumot
-                </FormLabel>
-                <Textarea
-                  resize='none'
-                  value={teacherDesc}
-                  onChange={(e) => setTeacherDesc(e.target.value)}
-                  placeholder="Ustoz haqida ma'lumot..."
-                  h={24}
-                  variant='outline'
-                  borderColor='gray.500'
-                  focusBorderColor='purple.500'
-                  transition='all 0.3s'
-                  _hover={{ borderColor: 'gray.400' }}
-                />
-                <FormLabel mt={2} fontSize={{ base: '14px', md: '16px' }}>
-                  Ustozning rasmi (512x512)
-                </FormLabel>
-                <Input
-                  type='file'
-                  ref={fileInputTeacherRef}
-                  onChange={handleTeacherImage}
-                  py={1}
-                  accept='.webp, .jpg, .jpeg, .png, .svg'
-                  borderColor='gray.500'
-                  transition='all 0.3s'
-                  _hover={{ borderColor: 'gray.400' }}
-                />
-                <Button
-                  onClick={handleTeacherSubmit}
-                  colorScheme='purple'
-                  w='full'
-                  mt={4}
-                  size='lg'
-                  _hover={{ bg: 'purple.600' }}
-                >
-                  Qo'shish
-                </Button>
-              </FormControl>
+              <Button onClick={onOpenTeacherModal} colorScheme="purple" w="full" maxW="400px">
+                Ustoz qo'shish
+              </Button>
 
-              <Box>
-                <Text textAlign={'center'} fontSize={{ base: '20px', md: '24px' }} fontWeight='bold' mb={4}>
-                  Barcha ustozlar
-                </Text>
-                <Box display={'flex'} justifyContent={'space-between'} flexWrap={'wrap'} rowGap={8}>
-                  {teachers.map((teacher) => (
-                    <MotionBox
-                      key={teacher.id}
-                      borderWidth='1px'
-                      w={'300px'}
-                      rounded='md'
-                      p={4}
-                      bg='gray.700'
-                      shadow='md'
-                      display={'grid'}
-                      alignContent={'space-between'}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.5 }}
-                    >
-                      {teacher.imageURL && (
-                        <Image
-                          src={teacher.imageURL}
-                          alt={teacher.name}
-                          w={'full'}
-                          objectFit='cover'
-                          borderRadius='md'
-                        />
-                      )}
-                      <Text fontSize='lg' fontWeight='bold'>
-                        {teacher.name}
-                      </Text>
-                      <Text>{teacher.job}</Text>
-                      <Button
-                        colorScheme='red'
-                        w='full'
-                        mt={4}
-                        onClick={() => handleTeacherDelete(teacher.id)}
-                        _hover={{ bg: 'red.600' }}
-                      >
-                        O'chirish
-                      </Button>
-                    </MotionBox>
-                  ))}
-                </Box>
+              <Box display={'flex'} flexWrap={'wrap'} gap={4} w="full">
+                {teachers.map((teacher) => (
+                  <Box key={teacher.id} borderWidth='1px' borderRadius='lg' w={'330px'} h={'550px'} display={'grid'} alignContent={'space-between'} overflow='hidden' p={5} bg='gray.700'>
+                    <Image src={teacher.imageURL} alt={teacher.name} borderRadius="md" w="full" objectFit="cover" mb={4} />
+                    <Text fontSize="xl" fontWeight="bold" mb={2}>{teacher.name}</Text>
+                    <Text fontSize="md" color="gray.300" mb={4}>{teacher.job}</Text>
+                    <Button w={'full'} colorScheme="blue" onClick={() => openTeacherModalForEdit(teacher)}>Tahrirlash</Button>
+                    <Button w={'full'} colorScheme="red" onClick={() => handleTeacherDelete(teacher.id)}>O'chirish</Button>
+                  </Box>
+                ))}
               </Box>
             </Stack>
           </TabPanel>
 
+          {/* Courses Tab */}
           <TabPanel>
             <Stack spacing={6} align='center'>
-              <FormControl
-                as={MotionBox}
-                w={{ base: '100%', md: '40%' }}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                bg='gray.700'
-                p={7}
-                borderRadius='md'
-                shadow='lg'
-              >
-                <Text fontSize={{ base: '20px', md: '24px' }} fontWeight='bold'>
-                  Kurs haqida
-                </Text>
-                <FormLabel mt={4} fontSize={{ base: '14px', md: '16px' }}>
-                  Kurs nomi
-                </FormLabel>
-                <Input
-                  type='text'
-                  value={courseName}
-                  onChange={(e) => setCourseName(e.target.value)}
-                  placeholder='Kurs nomi...'
-                  variant='outline'
-                  borderColor='gray.500'
-                  focusBorderColor='purple.500'
-                  transition='all 0.3s'
-                  _hover={{ borderColor: 'gray.400' }}
-                />
-                <FormLabel mt={2} fontSize={{ base: '14px', md: '16px' }}>
-                  Qisqacha ma'lumot
-                </FormLabel>
-                <Input
-                  type='text'
-                  value={briefDescription}
-                  onChange={(e) => setBriefDescription(e.target.value)}
-                  placeholder='Kurs haqida qisqacha...'
-                  variant='outline'
-                  borderColor='gray.500'
-                  focusBorderColor='purple.500'
-                  transition='all 0.3s'
-                  _hover={{ borderColor: 'gray.400' }}
-                />
-                <FormLabel mt={2} fontSize={{ base: '14px', md: '16px' }}>
-                  Batafsil ma'lumot
-                </FormLabel>
-                <Textarea
-                  resize='none'
-                  value={detailedDescription}
-                  onChange={(e) => setDetailedDescription(e.target.value)}
-                  placeholder="Kurs haqida batafsil ma'lumot..."
-                  h={24}
-                  variant='outline'
-                  borderColor='gray.500'
-                  focusBorderColor='purple.500'
-                  transition='all 0.3s'
-                  _hover={{ borderColor: 'gray.400' }}
-                />
-                <FormLabel mt={2} fontSize={{ base: '14px', md: '16px' }}>
-                  Kurs rasmi
-                </FormLabel>
-                <Input
-                  type='file'
-                  ref={fileInputCourseRef}
-                  onChange={handleImageChange}
-                  py={1}
-                  accept='.webp, .jpg, .jpeg, .png, .svg'
-                  borderColor='gray.500'
-                  transition='all 0.3s'
-                  _hover={{ borderColor: 'gray.400' }}
-                />
-                <Button
-                  onClick={handleSubmit}
-                  colorScheme='purple'
-                  w='full'
-                  mt={4}
-                  size='lg'
-                  _hover={{ bg: 'purple.600' }}
-                >
-                  Qo'shish
-                </Button>
-              </FormControl>
+              <Button onClick={onOpenCourseModal} colorScheme="purple" w="full" maxW="400px">
+                Kurs qo'shish
+              </Button>
 
-              <Box>
-                <Text textAlign={'center'} fontSize={{ base: '20px', md: '24px' }} fontWeight='bold' mb={4}>
-                  Barcha kurslar
-                </Text>
-                <Box display={'flex'} gap={8} justifyContent={'space-between'} flexWrap={'wrap'}>
-                  {courses.map((course) => (
-                    <MotionBox
-                      key={course.id}
-                      borderWidth='1px'
-                      rounded='md'
-                      p={4}
-                      bg='gray.700'
-                      shadow='md'
-                      display={'grid'}
-                      alignContent={'space-between'}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.5 }}
-                      maxW={'380px'}
-                    >
-                      {course.imageURL && (
-                        <Image
-                          src={course.imageURL}
-                          alt={course.name}
-                          w={'full'}
-                          objectFit='cover'
-                          borderRadius='md'
-                        />
-                      )}
-                      <Text fontSize='lg' fontWeight='bold'>
-                        {course.name}
-                      </Text>
-                      <Text>{course.brief}</Text>
-                      <Button
-                        colorScheme='red'
-                        w='full'
-                        mt={4}
-                        onClick={() => handleDelete(course.id)}
-                        _hover={{ bg: 'red.600' }}
-                      >
-                        O'chirish
-                      </Button>
-                    </MotionBox>
-                  ))}
-                </Box>
+              <Box display="flex" flexWrap={'wrap'} gap={5} w="full">
+                {courses.map((course) => (
+                  <Box key={course.id} display={'grid'} alignContent={'space-between'} borderWidth='1px' borderRadius='lg' w={'325px'} h={'390px'} overflow='hidden' p={5} bg='gray.700'>
+                    <Image src={course.imageURL} alt={course.name} borderRadius="md" w="full" objectFit="cover" mb={4} />
+                    <Text fontSize="xl" fontWeight="bold" mb={2}>{course.name}</Text>
+                    <Text fontSize="md" color="gray.300" mb={4}>{course.brief}</Text>
+                    <Box display={'flex'} justifyContent={'space-between'} gap={3}>
+                      <Button w={'full'} colorScheme="blue" onClick={() => openCourseModalForEdit(course)}>Tahrirlash</Button>
+                      <Button w={'full'} colorScheme="red" onClick={() => handleDelete(course.id)}>O'chirish</Button>
+                    </Box>
+                  </Box>
+                ))}
               </Box>
             </Stack>
           </TabPanel>
         </TabPanels>
       </Tabs>
+
+      {/* Course Modal */}
+      <Modal isOpen={isCourseModalOpen} onClose={onCloseCourseModal}>
+        <ModalOverlay />
+        <ModalContent bgColor={'gray.700'} textColor={'white'}>
+          <ModalHeader>Kursni {editCourseId ? 'Tahrirlash' : "Qo'shish"}</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <form onSubmit={handleSubmit}>
+              <FormControl id="course-name" isRequired mb={4}>
+                <FormLabel>Kurs nomi</FormLabel>
+                <Input
+                  placeholder="Kurs nomi"
+                  value={courseName}
+                  onChange={(e) => setCourseName(e.target.value)}
+                  borderColor={'gray.600'}
+                />
+              </FormControl>
+
+              <FormControl id="brief-description" isRequired mb={4}>
+                <FormLabel>Ruscha nomi</FormLabel>
+                <Textarea
+                  placeholder="Ruscha nom"
+                  value={briefDescription}
+                  onChange={(e) => setBriefDescription(e.target.value)}
+                  borderColor={'gray.600'}
+                />
+              </FormControl>
+
+              <FormControl id="detailed-description" isRequired mb={4}>
+                <FormLabel>Batafsil tavsif</FormLabel>
+                <Textarea
+                  placeholder="Batafsil tavsif"
+                  value={detailedDescription}
+                  onChange={(e) => setDetailedDescription(e.target.value)}
+                  borderColor={'gray.600'}
+                />
+              </FormControl>
+
+              <FormControl id="image" isRequired mb={4}>
+                <FormLabel>Rasm yuklash</FormLabel>
+                <Input type="file" ref={fileInputCourseRef} onChange={handleImageChange} borderColor={'gray.600'} />
+              </FormControl>
+
+              <Button colorScheme="purple" type="submit" w="full">
+                {editCourseId ? 'Yangilash' : "Qo'shish"}
+              </Button>
+            </form>
+          </ModalBody>
+          <ModalFooter>
+            <Button onClick={onCloseCourseModal}>Bekor qilish</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Teacher Modal */}
+      <Modal isOpen={isTeacherModalOpen} onClose={onCloseTeacherModal}>
+        <ModalOverlay />
+        <ModalContent bgColor={'gray.700'} textColor={'white'}>
+          <ModalHeader>Ustozni {editTeacherId ? 'Tahrirlash' : "Qo'shish"}</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <form onSubmit={handleTeacherSubmit}>
+              <FormControl id="teacher-name" isRequired mb={4}>
+                <FormLabel>Ustoz ismi</FormLabel>
+                <Input
+                  placeholder="Ustoz ismi"
+                  value={teacherName}
+                  onChange={(e) => setTeacherName(e.target.value)}
+                  borderColor={'gray.600'}
+                />
+              </FormControl>
+
+              <FormControl id="teacher-job" isRequired mb={4}>
+                <FormLabel>Ismi (Rus harflarda)</FormLabel>
+                <Input
+                  placeholder="Ustoz ismi"
+                  value={teacherJob}
+                  onChange={(e) => setTeacherJob(e.target.value)}
+                  borderColor={'gray.600'}
+                />
+              </FormControl>
+
+              <FormControl id="teacher-description" isRequired mb={4}>
+                <FormLabel>Tavsif</FormLabel>
+                <Textarea
+                  placeholder="Tavsif"
+                  value={teacherDesc}
+                  onChange={(e) => setTeacherDesc(e.target.value)}
+                  borderColor={'gray.600'}
+                />
+              </FormControl>
+
+              <FormControl id="teacher-image" isRequired mb={4}>
+                <FormLabel>Rasm yuklash</FormLabel>
+                <Input type="file" ref={fileInputTeacherRef} onChange={handleTeacherImage} borderColor={'gray.600'} />
+              </FormControl>
+
+              <Button colorScheme="purple" type="submit" w="full">
+                {editTeacherId ? 'Yangilash' : "Qo'shish"}
+              </Button>
+            </form>
+          </ModalBody>
+          <ModalFooter>
+            <Button onClick={onCloseTeacherModal}>Bekor qilish</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 };
